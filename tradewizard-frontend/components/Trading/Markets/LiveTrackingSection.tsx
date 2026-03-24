@@ -135,7 +135,16 @@ export default function LiveTrackingSection({
                 <div>
                   <div className="text-xs text-gray-500">Current Price</div>
                   <div className="text-sm text-white font-mono">
-                    {formatPrice(currentMarketPrice)}
+                    {isNoTrade
+                      ? formatPrice(currentMarketPrice)
+                      : formatPrice(
+                          rec.direction === "LONG_NO"
+                            ? 1 - currentMarketPrice
+                            : currentMarketPrice
+                        )}
+                  </div>
+                  <div className="text-[10px] text-gray-600">
+                    {isNoTrade ? "YES" : rec.direction === "LONG_NO" ? "NO token" : "YES token"}
                   </div>
                 </div>
               </div>
