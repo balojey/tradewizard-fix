@@ -62,11 +62,15 @@ interface GradeResult {
  * Walk the price history from the recommendation's creation time forward and
  * determine whether the target or stop loss was hit first.
  *
- * All prices are expressed as YES-token prices (0–1).
- * For LONG_NO we invert: the trader holds the NO token, so their "price" is
- * (1 - YES price). Target and stop are stored as YES-price levels, so:
- *   - LONG_NO target hit when YES price <= target_zone_max (NO price >= 1 - target_zone_max)
- *   - LONG_NO stop  hit when YES price >= stop_loss       (NO price <= 1 - stop_loss)
+ * Zone storage convention (from recommendation-generation.ts):
+ *   LONG_YES: entry/target/stop stored as YES-token prices
+ *   LONG_NO:  entry/target/stop stored as NO-token prices (1 - YES price)
+ *
+ * So for both directions the formula is identical in token space:
+ *   tokenPrice = direction === 'LONG_YES' ? yesPrice : 1 - yesPrice
+ *   SUCCESS when tokenPrice >= target_zone_min
+ *   FAILURE when tokenPrice <= stop_loss
+ *   ROI = (exitPrice - entryAvg) / entryAvg * 100
  */
 function gradeByPriceHistory(
   rec: {
@@ -88,75 +92,42 @@ function gradeByPriceHistory(
   )
     return null;
 
+  // All zones are already in token space — use them directly
   const entryAvg = (rec.entry_zone_min + rec.entry_zone_max) / 2;
-  const targetAvg = (rec.target_zone_min + rec.target_zone_max) / 2;
+  const targetMin = rec.target_zone_min;
   const stopLoss = rec.stop_loss;
   const recTs = new Date(rec.created_at).getTime();
 
-  // Only look at candles after the recommendation was created
   const relevant = history.filter((p) => p.ts >= recTs);
   if (relevant.length === 0) return null;
 
   for (const point of relevant) {
-    const yesPrice = point.price;
+    // Convert YES price to the recommendation's token space
+    const tokenPrice = rec.direction === "LONG_YES" ? point.price : 1 - point.price;
 
-    if (rec.direction === "LONG_YES") {
-      if (yesPrice >= targetAvg) {
-        // Target hit
-        const roi = ((targetAvg - entryAvg) / entryAvg) * 100;
-        return {
-          wasCorrect: true,
-          roiRealized: Math.round(roi * 100) / 100,
-          exitPrice: targetAvg,
-          exitTimestamp: new Date(point.ts).toISOString(),
-          gradedByPriceHistory: true,
-        };
-      }
-      if (yesPrice <= stopLoss) {
-        // Stop hit
-        const roi = ((stopLoss - entryAvg) / entryAvg) * 100;
-        return {
-          wasCorrect: false,
-          roiRealized: Math.round(roi * 100) / 100,
-          exitPrice: stopLoss,
-          exitTimestamp: new Date(point.ts).toISOString(),
-          gradedByPriceHistory: true,
-        };
-      }
-    } else if (rec.direction === "LONG_NO") {
-      // NO token price = 1 - YES price
-      // Entry is expressed as YES price, so NO entry = 1 - entryAvg
-      const noEntryAvg = 1 - entryAvg;
-      const noTargetAvg = 1 - targetAvg; // lower YES target → higher NO target
-      const noStop = 1 - stopLoss; // YES stop → NO stop complement
-
-      const noPrice = 1 - yesPrice;
-
-      if (noPrice >= noTargetAvg) {
-        const roi = ((noTargetAvg - noEntryAvg) / noEntryAvg) * 100;
-        return {
-          wasCorrect: true,
-          roiRealized: Math.round(roi * 100) / 100,
-          exitPrice: noTargetAvg,
-          exitTimestamp: new Date(point.ts).toISOString(),
-          gradedByPriceHistory: true,
-        };
-      }
-      if (noPrice <= noStop) {
-        const roi = ((noStop - noEntryAvg) / noEntryAvg) * 100;
-        return {
-          wasCorrect: false,
-          roiRealized: Math.round(roi * 100) / 100,
-          exitPrice: noStop,
-          exitTimestamp: new Date(point.ts).toISOString(),
-          gradedByPriceHistory: true,
-        };
-      }
+    if (tokenPrice >= targetMin) {
+      const roi = ((targetMin - entryAvg) / entryAvg) * 100;
+      return {
+        wasCorrect: true,
+        roiRealized: Math.round(roi * 100) / 100,
+        exitPrice: targetMin,
+        exitTimestamp: new Date(point.ts).toISOString(),
+        gradedByPriceHistory: true,
+      };
+    }
+    if (tokenPrice <= stopLoss) {
+      const roi = ((stopLoss - entryAvg) / entryAvg) * 100;
+      return {
+        wasCorrect: false,
+        roiRealized: Math.round(roi * 100) / 100,
+        exitPrice: stopLoss,
+        exitTimestamp: new Date(point.ts).toISOString(),
+        gradedByPriceHistory: true,
+      };
     }
   }
 
-  // Neither threshold was hit during the market's lifetime — fall back to
-  // resolution-based grading (market expired before target/stop was reached).
+  // Neither threshold was hit — fall back to resolution-based grading.
   return null;
 }
 
@@ -190,45 +161,25 @@ function gradeByResolution(
     (rec.direction === "LONG_YES" && resolvedOutcome === "YES") ||
     (rec.direction === "LONG_NO" && resolvedOutcome === "NO");
 
-  // If we have target/stop data, use them for ROI
+  // All zones are stored in token space — formula is identical for both directions
   if (rec.target_zone_min != null && rec.target_zone_max != null && rec.stop_loss != null) {
     const targetAvg = (rec.target_zone_min + rec.target_zone_max) / 2;
     const stopLoss = rec.stop_loss;
-
-    if (rec.direction === "LONG_YES") {
-      const exitPrice = wasCorrect ? targetAvg : stopLoss;
-      const roi = ((exitPrice - entryAvg) / entryAvg) * 100;
-      return {
-        wasCorrect,
-        roiRealized: Math.round(roi * 100) / 100,
-        exitPrice,
-        exitTimestamp: null,
-        gradedByPriceHistory: false,
-      };
-    } else {
-      // LONG_NO — work in NO-token space
-      const noEntry = 1 - entryAvg;
-      const noTarget = 1 - targetAvg;
-      const noStop = 1 - stopLoss;
-      const exitPrice = wasCorrect ? noTarget : noStop;
-      const roi = ((exitPrice - noEntry) / noEntry) * 100;
-      return {
-        wasCorrect,
-        roiRealized: Math.round(roi * 100) / 100,
-        exitPrice,
-        exitTimestamp: null,
-        gradedByPriceHistory: false,
-      };
-    }
+    const exitPrice = wasCorrect ? targetAvg : stopLoss;
+    const roi = ((exitPrice - entryAvg) / entryAvg) * 100;
+    return {
+      wasCorrect,
+      roiRealized: Math.round(roi * 100) / 100,
+      exitPrice,
+      exitTimestamp: null,
+      gradedByPriceHistory: false,
+    };
   }
 
-  // Legacy fallback: binary payout
+  // Legacy fallback: binary payout (no zones stored)
   let roi: number;
   if (wasCorrect) {
-    roi =
-      rec.direction === "LONG_YES"
-        ? (1 - entryAvg) * 100
-        : entryAvg * 100;
+    roi = ((1 - entryAvg) / entryAvg) * 100;
   } else {
     roi = -100;
   }
