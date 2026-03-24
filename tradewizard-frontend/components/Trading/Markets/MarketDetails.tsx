@@ -26,14 +26,13 @@ import QuickTradeService from "@/components/Trading/QuickTradeService";
 import RecommendationHistory from "@/components/Trading/Markets/RecommendationHistory";
 import RecommendationTimeTravel from "@/components/Trading/Markets/RecommendationTimeTravel";
 import PriceHistoryChart from "@/components/Trading/Markets/PriceHistoryChart";
-import PerformanceTab from "@/components/Trading/Markets/PerformanceTab";
 import TabNavigation, { Tab } from "@/components/shared/TabNavigation";
 
 interface MarketDetailsProps {
     market: PolymarketMarket;
 }
 
-type TabType = 'overview' | 'ai-insights' | 'debate' | 'data-flow' | 'chart' | 'time-travel' | 'performance';
+type TabType = 'overview' | 'ai-insights' | 'debate' | 'data-flow' | 'chart' | 'time-travel';
 
 export default function MarketDetails({ market }: MarketDetailsProps) {
     const { clobClient, isGeoblocked, safeAddress } = useTrading();
@@ -61,10 +60,7 @@ export default function MarketDetails({ market }: MarketDetailsProps) {
     const isClosed = market.closed;
     const isActive = market.active && !market.closed;
     const isEndingSoon = isActive && isMarketEndingSoon(market);
-    const disabled = isGeoblocked || !clobClient || isClosed; // Disable trading for closed markets
-
-    // Check if market has recommendations for Performance tab
-    const hasRecommendations = recommendationCount > 0;
+    const disabled = isGeoblocked || !clobClient || isClosed;
 
     const outcomes = market.outcomes ? JSON.parse(market.outcomes) : [];
     const tokenIds = market.clobTokenIds ? JSON.parse(market.clobTokenIds) : [];
@@ -131,8 +127,6 @@ export default function MarketDetails({ market }: MarketDetailsProps) {
         { id: 'debate', label: 'Agent Debate', icon: Users },
         { id: 'data-flow', label: 'Data Flow', icon: Activity },
         ...(shouldShowTimeTravel ? [{ id: 'time-travel' as const, label: `Time Travel (${recommendationCount})`, icon: Clock }] : []),
-        // Add Performance tab for any market with recommendations (not just closed markets)
-        ...(hasRecommendations ? [{ id: 'performance' as const, label: 'Performance', icon: TrendingUp }] : []),
     ];
 
     const handleOutcomeClick = (
@@ -402,17 +396,6 @@ export default function MarketDetails({ market }: MarketDetailsProps) {
                                         currentMarketPrice={displayToken.price}
                                         yesPrice={yesPrice}
                                         noPrice={noPrice}
-                                    />
-                                </div>
-                            )}
-
-                            {activeTab === 'performance' && hasRecommendations && (
-                                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                    <PerformanceTab
-                                        marketId={market.conditionId || ''}
-                                        conditionId={market.conditionId || ''}
-                                        resolvedOutcome={market.winningOutcome || 'Unknown'}
-                                        resolutionDate={market.resolvedAt || market.endDate || new Date().toISOString()}
                                     />
                                 </div>
                             )}
