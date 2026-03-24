@@ -131,59 +131,135 @@ export default function QuickTradeService({
                 </div>
 
                 {/* Trading Visualizer */}
-                <div className="p-6 space-y-7">
+                <div className="p-6 space-y-6">
 
-                    {/* Zone Visualizer */}
-                    <div className="space-y-3">
-                        {/* Track */}
-                        <div className="relative h-3 rounded-full overflow-hidden flex">
-                            {/* Danger zone: stop-loss to entry min */}
-                            <div
-                                className="h-full bg-red-500/20"
-                                style={{ width: `${getPercentPos(recommendation.entryZone[0]) - getPercentPos(recommendation.stopLoss)}%`, marginLeft: `${getPercentPos(recommendation.stopLoss)}%` }}
-                            />
-                            {/* Entry zone: entry min to entry max */}
-                            <div
-                                className="h-full bg-emerald-500/40 border-x border-emerald-500/40"
-                                style={{ width: `${getPercentPos(recommendation.entryZone[1]) - getPercentPos(recommendation.entryZone[0])}%` }}
-                            />
-                            {/* Upside zone: entry max to target */}
-                            <div
-                                className="h-full bg-purple-500/20 flex-1"
-                            />
-                        </div>
+                    {/* Horizontal zone bar */}
+                    {(() => {
+                        const stop      = recommendation.stopLoss;
+                        const entryLow  = recommendation.entryZone[0];
+                        const entryHigh = recommendation.entryZone[1];
+                        const target    = targetZone.price;
 
-                        {/* Current price needle */}
-                        <div className="relative h-4">
-                            <div
-                                className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
-                                style={{ left: `${getPercentPos(currentPrice)}%` }}
-                            >
-                                <div className="w-0.5 h-2 bg-white/60 rounded-full" />
-                                <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white text-[10px] font-bold whitespace-nowrap">
-                                    {(currentPrice * 100).toFixed(1)}¢
-                                </span>
-                            </div>
-                        </div>
+                        // Pad the visible range slightly beyond stop and target
+                        const pad       = (target - stop) * 0.08;
+                        const visMin    = stop - pad;
+                        const visMax    = target + pad;
+                        const span      = visMax - visMin;
+                        const toX       = (p: number) => ((p - visMin) / span) * 100;
 
-                        {/* Labels row */}
-                        <div className="grid grid-cols-3 gap-2 pt-1">
-                            <div className="flex flex-col gap-0.5">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-red-400/70">Stop Loss</span>
-                                <span className="text-sm font-bold font-mono text-red-400">{(recommendation.stopLoss * 100).toFixed(1)}¢</span>
+                        const stopX      = toX(stop);
+                        const entryLowX  = toX(entryLow);
+                        const entryHighX = toX(entryHigh);
+                        const targetX    = toX(target);
+                        const currX      = toX(Math.min(Math.max(currentPrice, visMin), visMax));
+                        const entryCx    = (entryLowX + entryHighX) / 2;
+
+                        const entryMid   = (entryLow + entryHigh) / 2;
+                        const riskPct    = Math.abs((entryMid - stop) / entryMid * 100);
+                        const rewardPct  = Math.abs((target - entryMid) / entryMid * 100);
+                        const rrRatio    = riskPct > 0 ? (rewardPct / riskPct).toFixed(1) : '—';
+
+                        return (
+                            <div className="space-y-1">
+                                {/* ── Top labels (above the bar) ── */}
+                                <div className="relative h-8">
+                                    {/* Stop label — above, left-anchored to marker */}
+                                    <div
+                                        className="absolute flex flex-col items-center"
+                                        style={{ left: `${stopX}%`, transform: 'translateX(-50%)' }}
+                                    >
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-red-400/70 whitespace-nowrap">Stop</span>
+                                        <span className="text-xs font-bold font-mono text-red-400 leading-tight">{(stop * 100).toFixed(1)}¢</span>
+                                    </div>
+
+                                    {/* Entry label — centered over the entry band */}
+                                    <div
+                                        className="absolute flex flex-col items-center"
+                                        style={{ left: `${entryCx}%`, transform: 'translateX(-50%)' }}
+                                    >
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400/70 whitespace-nowrap">Entry Zone</span>
+                                        <span className="text-xs font-bold font-mono text-emerald-300 leading-tight whitespace-nowrap">
+                                            {(entryLow * 100).toFixed(1)}–{(entryHigh * 100).toFixed(1)}¢
+                                        </span>
+                                    </div>
+
+                                    {/* Target label — above, right-anchored to marker */}
+                                    <div
+                                        className="absolute flex flex-col items-center"
+                                        style={{ left: `${targetX}%`, transform: 'translateX(-50%)' }}
+                                    >
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-purple-400/70 whitespace-nowrap">Target</span>
+                                        <span className="text-xs font-bold font-mono text-purple-300 leading-tight">{(target * 100).toFixed(1)}¢</span>
+                                    </div>
+                                </div>
+
+                                {/* ── The bar ── */}
+                                <div className="relative h-4 rounded-full bg-white/5 overflow-hidden">
+                                    {/* Risk zone: stop → entry low */}
+                                    <div
+                                        className="absolute top-0 h-full bg-red-500/25"
+                                        style={{ left: `${stopX}%`, width: `${entryLowX - stopX}%` }}
+                                    />
+                                    {/* Entry zone: entry low → entry high */}
+                                    <div
+                                        className="absolute top-0 h-full bg-emerald-500/50"
+                                        style={{ left: `${entryLowX}%`, width: `${entryHighX - entryLowX}%` }}
+                                    />
+                                    {/* Profit zone: entry high → target */}
+                                    <div
+                                        className="absolute top-0 h-full bg-purple-500/30"
+                                        style={{ left: `${entryHighX}%`, width: `${targetX - entryHighX}%` }}
+                                    />
+
+                                    {/* Stop marker — left edge tick */}
+                                    <div
+                                        className="absolute top-0 h-full w-0.5 bg-red-500"
+                                        style={{ left: `${stopX}%` }}
+                                    />
+                                    {/* Target marker — right edge tick */}
+                                    <div
+                                        className="absolute top-0 h-full w-0.5 bg-purple-400"
+                                        style={{ left: `${targetX}%` }}
+                                    />
+
+                                    {/* Current price dot — sits on the bar */}
+                                    <div
+                                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.7)] z-10 transition-all duration-700"
+                                        style={{ left: `${currX}%` }}
+                                    />
+                                </div>
+
+                                {/* ── Bottom: current price label pinned under the dot ── */}
+                                <div className="relative h-6">
+                                    <div
+                                        className="absolute flex flex-col items-center transition-all duration-700"
+                                        style={{ left: `${currX}%`, transform: 'translateX(-50%)' }}
+                                    >
+                                        <div className="w-px h-1.5 bg-white/30" />
+                                        <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30 text-[10px] font-bold font-mono text-indigo-300 whitespace-nowrap leading-tight">
+                                            {(currentPrice * 100).toFixed(1)}¢
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* ── Risk / Reward strip ── */}
+                                <div className="grid grid-cols-3 gap-2 pt-2">
+                                    <div className="flex flex-col items-center gap-0.5 p-2 rounded-lg bg-red-500/5 border border-red-500/10">
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-red-400/60">Risk</span>
+                                        <span className="text-sm font-bold font-mono text-red-400">−{riskPct.toFixed(1)}%</span>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-0.5 p-2 rounded-lg bg-white/5 border border-white/5">
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">R:R</span>
+                                        <span className="text-sm font-bold font-mono text-white">1:{rrRatio}</span>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-0.5 p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-purple-400/60">Reward</span>
+                                        <span className="text-sm font-bold font-mono text-purple-400">+{rewardPct.toFixed(1)}%</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex flex-col gap-0.5 items-center text-center">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">Entry Zone</span>
-                                <span className="text-sm font-bold font-mono text-emerald-400">
-                                    {(recommendation.entryZone[0] * 100).toFixed(1)}¢ – {(recommendation.entryZone[1] * 100).toFixed(1)}¢
-                                </span>
-                            </div>
-                            <div className="flex flex-col gap-0.5 items-end text-right">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-400/70">Target</span>
-                                <span className="text-sm font-bold font-mono text-purple-400">{(targetZone.price * 100).toFixed(1)}¢</span>
-                            </div>
-                        </div>
-                    </div>
+                        );
+                    })()}
 
                     {/* Primary Action Button */}
                     {!hasPosition ? (
