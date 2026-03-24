@@ -198,8 +198,12 @@ export async function GET(request: NextRequest) {
       console.error("Error fetching performance by category:", categoryError);
     }
 
-    // Calculate additional metrics from the closed markets data
-    const metrics = calculatePerformanceMetrics(enrichedMarkets);
+    // Derive metrics from the authoritative aggregate views (cover ALL recommendations,
+    // not just the most-recent-per-market slice used for the market grid).
+    const metrics = calculatePerformanceMetrics(
+      performanceSummary,
+      performanceByCategory || []
+    );
 
     return NextResponse.json({
       closedMarkets: enrichedMarkets,
@@ -231,8 +235,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function calculatePerformanceMetrics(closedMarkets: any[]) {
-  if (!closedMarkets.length) {
+/**
+ * Derive calculated metrics from the authoritative aggregate views.
+ * These views cover ALL recommendations across all resolved markets —
+ * not just the most-recent-per-market slice used for the market grid.
+ */
+function calculatePerformanceMetrics(
+  summary: any | null,
+  byCategory: any[]
+) {
+  if (!summary) {
     return {
       totalMarkets: 0,
       winRate: 0,
@@ -241,51 +253,32 @@ function calculatePerformanceMetrics(closedMarkets: any[]) {
       avgDaysToResolution: 0,
       bestPerformingCategory: null,
       worstPerformingCategory: null,
+      categoryBreakdown: [],
     };
   }
 
-  const totalMarkets = closedMarkets.length;
-  const correctPredictions = closedMarkets.filter(m => m.recommendation_was_correct).length;
-  const winRate = (correctPredictions / totalMarkets) * 100;
-  
-  const avgROI = closedMarkets.reduce((sum, m) => sum + (m.roi_realized || 0), 0) / totalMarkets;
-  const totalProfit = closedMarkets.reduce((sum, m) => sum + (m.roi_realized || 0), 0);
-  
-  const marketsWithResolutionTime = closedMarkets.filter(m => m.days_to_resolution !== null);
-  const avgDaysToResolution = marketsWithResolutionTime.length > 0
-    ? marketsWithResolutionTime.reduce((sum, m) => sum + m.days_to_resolution, 0) / marketsWithResolutionTime.length
-    : 0;
-
-  // Group by category for best/worst performing
-  const categoryPerformance = closedMarkets.reduce((acc, market) => {
-    const category = market.event_type;
-    if (!acc[category]) {
-      acc[category] = { correct: 0, total: 0, roi: 0 };
-    }
-    acc[category].total++;
-    if (market.recommendation_was_correct) {
-      acc[category].correct++;
-    }
-    acc[category].roi += market.roi_realized || 0;
-    return acc;
-  }, {} as Record<string, { correct: number; total: number; roi: number }>);
-
-  const categoryStats = (Object.entries(categoryPerformance) as [string, { correct: number; total: number; roi: number }][])
-    .map(([category, stats]) => ({
-      category,
-      winRate: (stats.correct / stats.total) * 100,
-      avgROI: stats.roi / stats.total,
-      totalMarkets: stats.total,
+  // Category stats already computed by v_performance_by_category (all recommendations)
+  const categoryStats = byCategory
+    .filter((c) => c.total_recommendations >= 3)
+    .map((c) => ({
+      category: c.event_type,
+      winRate: c.win_rate_pct,
+      avgROI: c.avg_roi,
+      totalMarkets: c.total_recommendations,
     }))
-    .filter(stat => stat.totalMarkets >= 3) // Only include categories with at least 3 markets
     .sort((a, b) => b.winRate - a.winRate);
 
   return {
-    totalMarkets,
-    winRate: Math.round(winRate * 100) / 100,
-    avgROI: Math.round(avgROI * 100) / 100,
-    totalProfit: Math.round(totalProfit * 100) / 100,
-    avgDaysToResolution: Math.round(avgDaysToResolution * 10) / 10,
+    // total unique markets is approximated by the closed-markets view count;
+    // for the stat cards we use total_resolved_recommendations from the summary.
+    totalMarkets: summary.total_resolved_recommendations,
+    winRate: summary.win_rate_pct,
+    avgROI: summary.avg_roi,
+    // total profit = sum of all ROIs (proxy; no position sizing)
+    totalProfit: Math.round(
+      (summary.avg_roi * summary.total_resolved_recommendations) * 100
+    ) / 100,
+    avgDaysToResolution: 0, // not tracked in aggregate views
     bestPerformingCategory: categoryStats[0] || null,
     worstPerformingCategory: categoryStats[categoryStats.length - 1] || null,
     categoryBreakdown: categoryStats,

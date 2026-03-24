@@ -344,9 +344,9 @@ export default function HistoryPage() {
             />
             <StatCard
               icon={BarChart3}
-              label="Total Markets"
-              value={`${metrics.totalMarkets}`}
-              sub="Resolved with AI"
+              label="Total Recommendations"
+              value={`${summary.total_resolved_recommendations}`}
+              sub="Across all resolved markets"
               accent="indigo"
             />
             <StatCard
