@@ -133,58 +133,55 @@ export default function QuickTradeService({
                 {/* Trading Visualizer */}
                 <div className="p-6 space-y-7">
 
-                    {/* Visual Range Slider */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <span>Stop-Loss</span>
-                            <span>Entry Zone</span>
-                            <span>Profit Target</span>
+                    {/* Zone Visualizer */}
+                    <div className="space-y-3">
+                        {/* Track */}
+                        <div className="relative h-3 rounded-full overflow-hidden flex">
+                            {/* Danger zone: stop-loss to entry min */}
+                            <div
+                                className="h-full bg-red-500/20"
+                                style={{ width: `${getPercentPos(recommendation.entryZone[0]) - getPercentPos(recommendation.stopLoss)}%`, marginLeft: `${getPercentPos(recommendation.stopLoss)}%` }}
+                            />
+                            {/* Entry zone: entry min to entry max */}
+                            <div
+                                className="h-full bg-emerald-500/40 border-x border-emerald-500/40"
+                                style={{ width: `${getPercentPos(recommendation.entryZone[1]) - getPercentPos(recommendation.entryZone[0])}%` }}
+                            />
+                            {/* Upside zone: entry max to target */}
+                            <div
+                                className="h-full bg-purple-500/20 flex-1"
+                            />
                         </div>
 
-                        <div className="relative h-2 bg-gray-800 rounded-full w-full">
-                            {/* Stop-Loss Marker */}
+                        {/* Current price needle */}
+                        <div className="relative h-4">
                             <div
-                                className="absolute h-4 w-0.5 top-1/2 -translate-y-1/2 bg-red-500 rounded-full opacity-80"
-                                style={{ left: `${getPercentPos(recommendation.stopLoss)}%` }}
-                            />
-                            
-                            {/* Entry Range Bar */}
-                            <div
-                                className="absolute h-full bg-green-500/30 rounded-full"
-                                style={{
-                                    left: `${getPercentPos(recommendation.entryZone[0])}%`,
-                                    width: `${getPercentPos(recommendation.entryZone[1]) - getPercentPos(recommendation.entryZone[0])}%`
-                                }}
-                            />
-
-                            {/* Current Price Indicator */}
-                            <div
-                                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-2 border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)] z-10 transition-all duration-1000"
+                                className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
                                 style={{ left: `${getPercentPos(currentPrice)}%` }}
                             >
-                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                    <span className="px-2 py-0.5 rounded bg-indigo-500 text-white text-[10px] font-bold whitespace-nowrap shadow-lg">
-                                        Curr: {(currentPrice * 100).toFixed(0)}¢
-                                    </span>
-                                    <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-indigo-500" />
-                                </div>
+                                <div className="w-0.5 h-2 bg-white/60 rounded-full" />
+                                <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white text-[10px] font-bold whitespace-nowrap">
+                                    {(currentPrice * 100).toFixed(1)}¢
+                                </span>
                             </div>
-
-                            {/* Targets Markers */}
-                            <div
-                                className="absolute h-3 w-0.5 top-1/2 -translate-y-1/2 bg-green-500 rounded-full opacity-60"
-                                style={{ left: `${getPercentPos(entryZone.price)}%` }}
-                            />
-                            <div
-                                className="absolute h-3 w-0.5 top-1/2 -translate-y-1/2 bg-purple-500 rounded-full opacity-60"
-                                style={{ left: `${getPercentPos(targetZone.price)}%` }}
-                            />
                         </div>
 
-                        <div className="flex justify-between text-xs font-mono">
-                            <span className="text-red-500">{(recommendation.stopLoss * 100).toFixed(1)}¢</span>
-                            <span className="text-green-500">{(entryZone.price * 100).toFixed(1)}¢</span>
-                            <span className="text-purple-500">{(targetZone.price * 100).toFixed(1)}¢</span>
+                        {/* Labels row */}
+                        <div className="grid grid-cols-3 gap-2 pt-1">
+                            <div className="flex flex-col gap-0.5">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-red-400/70">Stop Loss</span>
+                                <span className="text-sm font-bold font-mono text-red-400">{(recommendation.stopLoss * 100).toFixed(1)}¢</span>
+                            </div>
+                            <div className="flex flex-col gap-0.5 items-center text-center">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">Entry Zone</span>
+                                <span className="text-sm font-bold font-mono text-emerald-400">
+                                    {(recommendation.entryZone[0] * 100).toFixed(1)}¢ – {(recommendation.entryZone[1] * 100).toFixed(1)}¢
+                                </span>
+                            </div>
+                            <div className="flex flex-col gap-0.5 items-end text-right">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-400/70">Target</span>
+                                <span className="text-sm font-bold font-mono text-purple-400">{(targetZone.price * 100).toFixed(1)}¢</span>
+                            </div>
                         </div>
                     </div>
 
