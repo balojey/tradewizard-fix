@@ -27,12 +27,13 @@ import RecommendationHistory from "@/components/Trading/Markets/RecommendationHi
 import RecommendationTimeTravel from "@/components/Trading/Markets/RecommendationTimeTravel";
 import PriceHistoryChart from "@/components/Trading/Markets/PriceHistoryChart";
 import TabNavigation, { Tab } from "@/components/shared/TabNavigation";
+import PerformanceTab from "@/components/Trading/Markets/PerformanceTab";
 
 interface MarketDetailsProps {
     market: PolymarketMarket;
 }
 
-type TabType = 'overview' | 'ai-insights' | 'debate' | 'data-flow' | 'chart' | 'time-travel';
+type TabType = 'overview' | 'ai-insights' | 'debate' | 'data-flow' | 'chart' | 'time-travel' | 'performance';
 
 export default function MarketDetails({ market }: MarketDetailsProps) {
     const { clobClient, isGeoblocked, safeAddress } = useTrading();
@@ -126,6 +127,7 @@ export default function MarketDetails({ market }: MarketDetailsProps) {
         { id: 'chart', label: 'Price Chart', icon: TrendingUp },
         { id: 'debate', label: 'Agent Debate', icon: Users },
         { id: 'data-flow', label: 'Data Flow', icon: Activity },
+        { id: 'performance', label: 'Performance', icon: BarChart3 },
         ...(shouldShowTimeTravel ? [{ id: 'time-travel' as const, label: `Time Travel (${recommendationCount})`, icon: Clock }] : []),
     ];
 
@@ -396,6 +398,18 @@ export default function MarketDetails({ market }: MarketDetailsProps) {
                                         currentMarketPrice={displayToken.price}
                                         yesPrice={yesPrice}
                                         noPrice={noPrice}
+                                    />
+                                </div>
+                            )}
+
+                            {activeTab === 'performance' && (
+                                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                    <PerformanceTab
+                                        conditionId={market.conditionId || null}
+                                        isResolved={market.closed}
+                                        winningOutcome={market.winningOutcome}
+                                        endDate={market.endDate}
+                                        currentMarketPrice={yesPrice}
                                     />
                                 </div>
                             )}

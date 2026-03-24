@@ -6,7 +6,7 @@ Implement the Performance tab on the market details page. The previous attempt w
 
 ## Tasks
 
-- [ ] 1. Create performance utility helpers
+- [x] 1. Create performance utility helpers
   - Create `utils/performanceHelpers.ts` exporting `computeLivePnL`, `computeRecommendationStatus`, `formatPrice`, `formatProbability`, `formatROI`, and the `RecommendationStatus` type + `STATUS_BADGE_MAP` constant
   - `computeLivePnL(rec, currentYesPrice)` — returns `null` for NO_TRADE or non-finite entry; for LONG_YES: `((currentYesPrice - entryMid) / entryMid) * 100`; for LONG_NO: `((noCurrent - noEntry) / noEntry) * 100`
   - `computeRecommendationStatus(rec, currentYesPrice)` — returns one of `"in-entry-zone" | "above-target" | "below-stop" | "between-entry-and-target" | "pending"` per the design's zone logic for both LONG_YES and LONG_NO
@@ -59,7 +59,7 @@ Implement the Performance tab on the market details page. The previous attempt w
     - **Property 10: Probability formatting is consistent**
     - **Validates: Requirements 11.2**
 
-- [ ] 2. Update `useMarketPerformance` hook
+- [x] 2. Update `useMarketPerformance` hook
   - Add `isResolved?: boolean` to `UseMarketPerformanceOptions` interface
   - When `isResolved: true` → `staleTime: 10 * 60 * 1000`, `refetchInterval: false`, `refetchOnWindowFocus: false`
   - When `isResolved: false` (default) → `staleTime: 60 * 1000`, `refetchInterval: 60 * 1000`, `refetchOnWindowFocus: true`
@@ -72,13 +72,13 @@ Implement the Performance tab on the market details page. The previous attempt w
     - `marketId: null` → query disabled (no fetch)
     - _Requirements: 2.8, 2.9, 8.3_
 
-- [ ] 3. Create `RecommendationStatusBadge` component
+- [x] 3. Create `RecommendationStatusBadge` component
   - Create `components/Trading/Markets/RecommendationStatusBadge.tsx`
   - Props: `status: RecommendationStatus` (imported from `utils/performanceHelpers`)
   - Renders a `<span>` with label and color classes from `STATUS_BADGE_MAP`; always includes a text label (not color-only)
   - _Requirements: 9.2, 9.3, 9.4, 9.5, 9.6, 10.3_
 
-- [ ] 4. Create `ConfidenceBreakdownTable` component
+- [x] 4. Create `ConfidenceBreakdownTable` component
   - Create `components/Trading/Markets/ConfidenceBreakdownTable.tsx`
   - Props: `byConfidence: AccuracyMetrics["byConfidence"]` (imported from `useMarketPerformance`)
   - Renders rows only for confidence levels where `total > 0`; omits zero-count rows entirely
@@ -96,14 +96,14 @@ Implement the Performance tab on the market details page. The previous attempt w
     - **Property 11: Confidence breakdown omits zero-count levels**
     - **Validates: Requirements 4.6, 4.7**
 
-- [ ] 5. Create `AgentSignalsSection` component
+- [x] 5. Create `AgentSignalsSection` component
   - Create `components/Trading/Markets/AgentSignalsSection.tsx`
   - Props: `agentSignals: AgentSignal[]` (imported from `useMarketPerformance`)
   - Renders a `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3` of signal cards; LONG_YES in green, LONG_NO in red; omits section entirely when `agentSignals.length === 0`
   - Uses `formatProbability` from `utils/performanceHelpers` for the probability display
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 6. Create `LiveTrackingSection` component
+- [x] 6. Create `LiveTrackingSection` component
   - Create `components/Trading/Markets/LiveTrackingSection.tsx`
   - Props: `recommendations: RecommendationWithOutcome[]`, `currentMarketPrice: number`
   - For each recommendation: compute status via `computeRecommendationStatus`, render `<RecommendationStatusBadge>`, compute live P&L via `computeLivePnL` (NOT `rec.roiRealized`), display entry zone / target zone / stop-loss using `formatPrice`
@@ -118,7 +118,7 @@ Implement the Performance tab on the market details page. The previous attempt w
     - Zero entry zone → "N/A" for price fields + data quality warning
     - _Requirements: 3.2, 3.10, 5.5, 11.7_
 
-- [ ] 7. Create `ResolvedMarketSection` component
+- [x] 7. Create `ResolvedMarketSection` component
   - Create `components/Trading/Markets/ResolvedMarketSection.tsx`
   - Props: `recommendations: RecommendationWithOutcome[]`, `metrics: PerformanceMetrics`, `winningOutcome?: string`, `endDate?: string`, `priceHistory: Array<{timestamp: string; price: number}>`
   - Renders: (a) Market Resolution summary card (outcome, resolution date, total recs count), (b) `<ROIMetrics>` from `components/Performance/ROIMetrics`, (c) `<ConfidenceBreakdownTable>`, (d) recommendation list with `wasCorrect`, `roiRealized` (from API — not recomputed), `gradedByPriceHistory` "Intraday" badge, close date logic per Req 11.5
@@ -134,10 +134,10 @@ Implement the Performance tab on the market details page. The previous attempt w
     - `exitTimestamp` present → shown as close date; absent → "Resolved at market close"
     - _Requirements: 4.3, 4.8, 4.9, 5.8, 11.5_
 
-- [ ] 8. Checkpoint — verify sub-components compile and render in isolation
+- [x] 8. Checkpoint — verify sub-components compile and render in isolation
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Rewrite `PerformanceTab` component
+- [x] 9. Rewrite `PerformanceTab` component
   - Fully rewrite `components/Trading/Markets/PerformanceTab.tsx` with the new props interface:
     ```ts
     interface PerformanceTabProps {
@@ -181,7 +181,7 @@ Implement the Performance tab on the market details page. The previous attempt w
     - **Property 6: NO_TRADE recommendations are excluded from all aggregate calculations**
     - **Validates: Requirements 3.10, 5.8, 11.6**
 
-- [ ] 10. Integrate Performance tab into `MarketDetails`
+- [x] 10. Integrate Performance tab into `MarketDetails`
   - In `components/Trading/Markets/MarketDetails.tsx`:
     - Extend `TabType` to `'overview' | 'ai-insights' | 'debate' | 'data-flow' | 'chart' | 'time-travel' | 'performance'`
     - Add `{ id: 'performance', label: 'Performance', icon: BarChart3 }` to the `tabs` array (always shown, not conditional)
@@ -189,7 +189,7 @@ Implement the Performance tab on the market details page. The previous attempt w
     - Add render block: `{activeTab === 'performance' && (<PerformanceTab conditionId={market.conditionId || null} isResolved={market.closed} winningOutcome={market.winningOutcome} endDate={market.endDate} currentMarketPrice={yesPrice} />)}`
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 3.8_
 
-- [ ] 11. Final checkpoint — ensure all tests pass
+- [x] 11. Final checkpoint — ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

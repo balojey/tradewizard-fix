@@ -79,6 +79,7 @@ export interface MarketPerformanceDetailResponse {
 
 export interface UseMarketPerformanceOptions {
   enabled?: boolean;
+  isResolved?: boolean; // controls cache/refetch behavior
 }
 
 /**
@@ -107,7 +108,23 @@ export function useMarketPerformance(
   marketId: string | null,
   options: UseMarketPerformanceOptions = {}
 ) {
-  const { enabled = true } = options;
+  const { enabled = true, isResolved = false } = options;
+
+  // Cache settings differ for resolved vs active markets.
+  // Resolved markets are immutable; active markets need live updates.
+  // Requirements: 2.8, 2.9, 8.3, 8.6
+  const resolvedCacheOptions = {
+    staleTime: 10 * 60 * 1000,   // 10 minutes
+    refetchInterval: false as const,
+    refetchOnWindowFocus: false,
+  };
+  const activeCacheOptions = {
+    staleTime: 60 * 1000,         // 60 seconds
+    refetchInterval: 60 * 1000,   // poll every 60 seconds
+    refetchOnWindowFocus: true,
+  };
+
+  const cacheOptions = isResolved ? resolvedCacheOptions : activeCacheOptions;
 
   return useQuery<MarketPerformanceDetailResponse>({
     queryKey: ["market-performance", marketId],
@@ -130,10 +147,9 @@ export function useMarketPerformance(
       return response.json();
     },
     enabled: enabled && !!marketId,
-    staleTime: 10 * 60 * 1000, // 10 minutes (closed markets don't change)
-    gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
-    refetchOnWindowFocus: false, // Closed markets are static
+    gcTime: 30 * 60 * 1000,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...cacheOptions,
   });
 }
