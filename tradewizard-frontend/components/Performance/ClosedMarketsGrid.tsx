@@ -400,34 +400,46 @@ function ClosedMarketCard({ market, onMarketClick }: ClosedMarketCardProps) {
                 </span>
               </div>
 
-              {/* ROI Display */}
+              {/* ROI Display — total across all recommendations */}
               <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
-                <div className="flex items-center gap-2">
-                  {market.roi_realized != null && market.roi_realized >= 0 ? (
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4 text-red-400" />
-                  )}
-                  <span className="text-xs text-gray-400 uppercase font-medium">
-                    ROI
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    {market.roi_realized != null && market.roi_realized >= 0 ? (
+                      <TrendingUp className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-400" />
+                    )}
+                    <span className="text-xs text-gray-400 uppercase font-medium">
+                      Total ROI
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-600 pl-6">
+                    {market.correct_count ?? 0}/{market.recommendation_count ?? 1} correct
                   </span>
                 </div>
-                <span
-                  className={`text-lg font-bold font-mono ${
-                    market.roi_realized != null && market.roi_realized >= 0
-                      ? "text-emerald-400"
-                      : "text-red-400"
-                  }`}
-                >
-                  {market.roi_realized != null ? (
-                    <>
-                      {market.roi_realized >= 0 ? "+" : ""}
-                      {market.roi_realized.toFixed(1)}%
-                    </>
-                  ) : (
-                    "N/A"
+                <div className="text-right">
+                  <span
+                    className={`text-lg font-bold font-mono ${
+                      market.roi_realized != null && market.roi_realized >= 0
+                        ? "text-emerald-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {market.roi_realized != null ? (
+                      <>
+                        {market.roi_realized >= 0 ? "+" : ""}
+                        {market.roi_realized.toFixed(1)}%
+                      </>
+                    ) : (
+                      "N/A"
+                    )}
+                  </span>
+                  {market.recommendation_count > 1 && market.avg_roi != null && (
+                    <div className="text-xs text-gray-500 font-mono">
+                      avg {market.avg_roi >= 0 ? "+" : ""}{market.avg_roi.toFixed(1)}%
+                    </div>
                   )}
-                </span>
+                </div>
               </div>
             </div>
           ) : (

@@ -17,7 +17,14 @@ export interface ClosedMarketPerformance {
   entry_zone_max: number;
   explanation: string;
   recommendation_was_correct: boolean;
+  /** Total ROI summed across ALL recommendations for this market */
   roi_realized: number;
+  /** Average ROI per recommendation for this market */
+  avg_roi: number;
+  /** Total number of recommendations for this market */
+  recommendation_count: number;
+  /** Number of correct recommendations for this market */
+  correct_count: number;
   edge_captured: number;
   market_probability_at_recommendation: number;
   resolution_date: string;
