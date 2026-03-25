@@ -390,20 +390,25 @@ function calculatePotentialPnL(
   yesPrice: number,
   noPrice: number
 ): PotentialPnL {
-  // Use the correct token price based on the recommendation action
+  // Zones are stored in token space:
+  //   LONG_YES → YES-token prices, LONG_NO → NO-token prices (1 - YES price)
+  // So currentPrice in token space is:
   const currentPrice = recommendation.action === 'LONG_YES' ? yesPrice : noPrice;
-  
-  const entryPrice = recommendation.action === 'LONG_YES' 
-    ? recommendation.entryZone[0] 
-    : recommendation.entryZone[0]; // Entry zone should be in the same token's terms
 
-  const targetPrice = recommendation.action === 'LONG_YES'
-    ? recommendation.targetZone[1]
-    : recommendation.targetZone[1]; // Target zone should be in the same token's terms
+  // Entry midpoint — mirrors gradeByResolution in [marketId]/route.ts
+  const entryAvg = (recommendation.entryZone[0] + recommendation.entryZone[1]) / 2;
 
-  const potentialReturn = currentPrice - entryPrice;
-  const potentialReturnPercent = entryPrice > 0 ? (potentialReturn / entryPrice) * 100 : 0;
-  
+  // Target midpoint and stop loss (in token space)
+  const targetAvg = (recommendation.targetZone[0] + recommendation.targetZone[1]) / 2;
+  // stopLoss is not stored on HistoricalRecommendation — use entryZone[0] as proxy
+  // (zones are entry[0]=min, entry[1]=max; target[0]=min, target[1]=max)
+
+  // ROI formula: (exitPrice - entryAvg) / entryAvg * 100
+  // For an active market we don't know the exit yet, so we use current price as the
+  // unrealised exit — same as computeLivePnL in performanceHelpers.ts
+  const potentialReturn = currentPrice - entryAvg;
+  const potentialReturnPercent = entryAvg > 0 ? (potentialReturn / entryAvg) * 100 : 0;
+
   const daysHeld = Math.max(1, Math.floor(
     (new Date().getTime() - new Date(recommendation.timestamp).getTime()) / (1000 * 60 * 60 * 24)
   ));
@@ -414,9 +419,9 @@ function calculatePotentialPnL(
     recommendationId: recommendation.id,
     timestamp: recommendation.timestamp,
     action: recommendation.action,
-    entryPrice,
+    entryPrice: entryAvg,
     currentPrice,
-    targetPrice,
+    targetPrice: targetAvg,
     potentialReturn,
     potentialReturnPercent,
     wouldHaveProfit: potentialReturn > 0,
