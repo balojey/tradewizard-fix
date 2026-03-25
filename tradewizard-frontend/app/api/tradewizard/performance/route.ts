@@ -170,8 +170,7 @@ export async function GET(request: NextRequest) {
     const { data: performanceByAgent, error: agentError } = await supabase
       .from("v_performance_by_agent")
       .select("*")
-      .order("win_rate_pct", { ascending: false })
-      .limit(10);
+      .order("win_rate_pct", { ascending: false });
 
     if (agentError) {
       console.error("Error fetching performance by agent:", agentError);
